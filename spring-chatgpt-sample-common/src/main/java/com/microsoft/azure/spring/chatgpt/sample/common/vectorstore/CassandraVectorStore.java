@@ -21,6 +21,8 @@ public class CassandraVectorStore implements VectorStore {
 
     private CassandraTemplate cassandraTemplate;
 
+    private List<String > keys = new ArrayList<>();
+
     public CassandraVectorStore() throws IOException {
         this.data = new VectorStoreData();
         this.cassandraTemplate =  new CassandraTemplate();
@@ -28,6 +30,20 @@ public class CassandraVectorStore implements VectorStore {
     @Override
     public void saveDocument(String key, CassandraEntity row) throws IOException {
         cassandraTemplate.insert(row);
+    }
+
+    public void storeKey(String key) {
+        cassandraTemplate.cassandraSession.execute("INSERT INTO "+cassandraTemplate.keyspace+".keys (partitionKey, id) VALUES ('all keys', '"+key+"')");
+    }
+    public void retrieveKeys () {
+        ResultSet resultSet = cassandraTemplate.cassandraSession.execute("SELECT id FROM "+cassandraTemplate.keyspace+".keys where partitionKey = 'all keys'");
+        for (Row row : resultSet) {
+            String id = row.getString("id");
+            keys.add(id);
+        }
+    }
+    public List<String> getKeys() {
+        return keys;
     }
 
     @Override
@@ -61,8 +77,16 @@ public class CassandraVectorStore implements VectorStore {
         CqlVector<Float> openaiembedding = CqlVector.newInstance(embedding);
         List<CassandraEntity> result = new ArrayList<>();
         log.info("Getting top {} nearest neighbors - Cassandra MI 5.0 Vector Search",k );
-        ResultSet resultSet = cassandraTemplate.cassandraSession.execute("SELECT id, hash, text, embedding, similarity_cosine(embedding, ?) as similarity FROM "+cassandraTemplate.keyspace+"."+cassandraTemplate.vectorstore+" ORDER BY embedding ANN OF ? LIMIT "+k+"", openaiembedding, openaiembedding);
+        List <String> keys = getKeys();
+        if (keys.size() > 1) {
+            log.warn("*** The vector store is partitioned by the file name for each data file loaded into it. ");
+            log.warn("*** You have loaded more than one file into the vector store.");
+            log.warn("*** This might be ok, but with current design, each vector search will be a cross partition key query. ");
+            log.warn("*** Consider loading your data from a single file, or re-designing the data model to limit cross partition key queries. ");
+        }
+        ResultSet resultSet = cassandraTemplate.cassandraSession.execute("SELECT partitionKey, id, hash, text, embedding, similarity_cosine(embedding, ?) as similarity FROM "+cassandraTemplate.keyspace+"."+cassandraTemplate.vectorstore+" ORDER BY embedding ANN OF ? LIMIT "+k+"", openaiembedding, openaiembedding);
         for (Row row : resultSet) {
+            String partitionKey = row.getString("partitionKey");
             String id = row.getString("id");
             String hash = row.getString("hash");
             String text = row.getString("text");
@@ -71,30 +95,35 @@ public class CassandraVectorStore implements VectorStore {
             for (Float f : embedding1) {
                 embedding2.add(f);
             }
-            CassandraEntity cassandraEntity = new CassandraEntity(id, hash, text, embedding2);
+            CassandraEntity cassandraEntity = new CassandraEntity(partitionKey, id, hash, text, embedding2);
             result.add(cassandraEntity);
         }
+
         log.info("Embedding search complete");
         return result;
     }
 
-    public void createVectorIndex(int numLists, int dimensions, String similarity) {
+    public void createVectorIndex() {
         String statement = "CREATE CUSTOM INDEX vectorstore_embedding_idx ON "+cassandraTemplate.keyspace+"."+cassandraTemplate.vectorstore+" (embedding) USING 'StorageAttachedIndex';";
         cassandraTemplate.cassandraSession.execute(statement);
     }
 
-    public List<CassandraEntity> loadFromJsonFile(String filePath) {
+    public List<CassandraEntity> loadFromJsonFile(String filePath, String fileName) {
         var reader = new ObjectMapper().reader();
         try {
-            int dimensions = 0;
             Row FirstDocFound = cassandraTemplate.selectOne();
             if (FirstDocFound == null) {
                 log.info("No vector search data found. Loading default data from file: {} .....", filePath);
                 var data = reader.readValue(new File(filePath), VectorStoreData.class);
                 List<CassandraEntity> list = new ArrayList<CassandraEntity>(data.store.values());
+                list.forEach(doc -> {
+                    doc.setPartitionKey(fileName);
+                });
                 cassandraTemplate.insertMany(list);
+                //store the partition keys in a separate table
+                cassandraTemplate.cassandraSession.execute("INSERT INTO "+cassandraTemplate.keyspace+".keys (partitionKey, id) VALUES ('all keys','"+fileName+"')");
                 try {
-                    createVectorIndex(100, dimensions, "COS");
+                    createVectorIndex();
                 }
                 catch (Exception e) {
                     log.info("Index already exists");

@@ -51,6 +51,7 @@ public class DocumentIndexPlanner {
                 }
                 String key = UUID.randomUUID().toString();
                 entities.add(CassandraEntity.builder()
+                        .partitionKey(fileName)
                         .id(key)
                         .hash("")
                         .embedding(vector)
@@ -59,13 +60,14 @@ public class DocumentIndexPlanner {
             }
             try {
                 vectorStore.saveDocuments(entities);
+                vectorStore.storeKey(fileName);
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
             return null;
         });
         try {
-            vectorStore.createVectorIndex(100, dimensions[0], "COS");
+            vectorStore.createVectorIndex();
         }
         catch (Exception e) {
             log.info("Index already exists");

@@ -3,12 +3,11 @@ import lombok.Builder;
 import lombok.extern.jackson.Jacksonized;
 import java.util.Vector;
 
-//@Data
 @Builder
 @Jacksonized
 public class CassandraEntity {
 
-    //@Id
+    private String partitionKey;
     private String id;
     private String hash;
     private String text;
@@ -16,11 +15,20 @@ public class CassandraEntity {
 
     public CassandraEntity() {}
 
-    public CassandraEntity(String id, String hash, String text, Vector<Float> embedding) {
+    public CassandraEntity(String partitionKey, String id, String hash, String text, Vector<Float> embedding) {
         this.id = id;
         this.hash = hash;
         this.text = text;
         this.embedding = embedding;
+        this.partitionKey = partitionKey;
+    }
+
+    public String getPartitionKey() {
+        return partitionKey;
+    }
+
+    public void setPartitionKey(String partitionKey) {
+        this.partitionKey = partitionKey;
     }
 
     public String getId() {
