@@ -59,7 +59,8 @@ public class Config {
         CassandraVectorStore store = new CassandraVectorStore();
         String currentPath = new java.io.File(".").getCanonicalPath();;
         String path = currentPath+vectorJsonFile.replace(  "\\", "//");
-        store.loadFromJsonFile(path);
+        store.loadFromJsonFile(path, vectorJsonFile);
+        store.retrieveKeys();
         return store;
     }
 }

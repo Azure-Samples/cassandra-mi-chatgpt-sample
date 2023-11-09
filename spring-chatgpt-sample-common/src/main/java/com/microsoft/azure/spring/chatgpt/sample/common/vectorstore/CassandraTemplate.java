@@ -1,7 +1,5 @@
 package com.microsoft.azure.spring.chatgpt.sample.common.vectorstore;
 import com.datastax.oss.driver.api.core.CqlSession;
-import com.datastax.oss.driver.api.core.cql.BoundStatement;
-import com.datastax.oss.driver.api.core.cql.PreparedStatement;
 import com.datastax.oss.driver.api.core.cql.Row;
 import com.datastax.oss.driver.api.core.data.CqlVector;
 import lombok.extern.slf4j.Slf4j;
@@ -29,7 +27,8 @@ public class CassandraTemplate {
         cassandraSession = CqlSession.builder().withLocalDatacenter(dc).build();
         log.info("Creating keyspace and table if not exists...");
         cassandraSession.execute("CREATE KEYSPACE IF NOT EXISTS "+keyspace+" WITH replication = {'class': 'NetworkTopologyStrategy', '"+dc+"': '3'}");
-        cassandraSession.execute("CREATE TABLE IF NOT EXISTS "+keyspace+"."+vectorstore+" (id text PRIMARY KEY, hash text, text text, embedding vector <float, 1536> )");
+        cassandraSession.execute("CREATE TABLE IF NOT EXISTS "+keyspace+"."+vectorstore+" (partitionKey text, id text, hash text, text text, embedding vector <float, 1536>, PRIMARY KEY (partitionKey, id))");
+        cassandraSession.execute("CREATE TABLE IF NOT EXISTS "+keyspace+".keys (partitionKey text, id text, PRIMARY KEY (partitionKey, id))");
         log.info("Finished creating keyspace and table if not exists.");
     }
 
@@ -59,8 +58,8 @@ public class CassandraTemplate {
     public CassandraEntity insert(CassandraEntity entity) throws IOException {
 
         CqlVector vector = CqlVector.newInstance(entity.getEmbedding());
-        cassandraSession.execute("INSERT INTO "+keyspace+"."+vectorstore+" (id, hash, text, embedding) VALUES (?, ?, ?, ?)",
-                entity.getId(), entity.getHash(), entity.getText(), vector);
+        cassandraSession.execute("INSERT INTO "+keyspace+"."+vectorstore+" (partitionKey, id, hash, text, embedding) VALUES (?, ?, ?, ?, ?)",
+                entity.getPartitionKey(),entity.getId(), entity.getHash(), entity.getText(), vector);
         return entity;
     }
     public CassandraEntity selectOneById(Object id) {
@@ -69,11 +68,6 @@ public class CassandraTemplate {
         return doc;
     }
 
-    public void insertVector(String preparedStatement, int id, String text, String hash, String embedding) {
-        PreparedStatement prepared = cassandraSession.prepare(preparedStatement);
-        BoundStatement bound = prepared.bind(id, text, hash, embedding).setIdempotent(true);
-        cassandraSession.execute(bound);
-    }
     public boolean deleteById(Object id) {
 
         cassandraSession.execute("DELETE FROM "+keyspace+"."+vectorstore+" WHERE id = ?", id);
@@ -88,6 +82,7 @@ public class CassandraTemplate {
     public List<CassandraEntity> select(String cql) {
         List<CassandraEntity> docs = cassandraSession.execute(cql).all().stream().map(row -> {
             CassandraEntity doc = new CassandraEntity();
+            doc.setPartitionKey(row.getString("partitionKey"));
             doc.setId(row.getString("id"));
             doc.setHash(row.getString("hash"));
             doc.setText(row.getString("text"));
