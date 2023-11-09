@@ -81,8 +81,8 @@ public class CassandraVectorStore implements VectorStore {
         if (keys.size() > 1) {
             log.warn("*** The vector store is partitioned by the file name for each data file loaded into it. ");
             log.warn("*** You have loaded more than one file into the vector store.");
-            log.warn("*** This might be ok, but with current design, each vector search will be a cross partition key query. ");
-            log.warn("*** Consider loading your data from a single file, or re-designing the data model to limit cross partition key queries. ");
+            log.warn("*** With current design, each vector search will be a cross partition key query. ");
+            log.warn("*** Consider loading your data from a single file, or changing data model to limit cross partition key queries. ");
         }
         ResultSet resultSet = cassandraTemplate.cassandraSession.execute("SELECT partitionKey, id, hash, text, embedding, similarity_cosine(embedding, ?) as similarity FROM "+cassandraTemplate.keyspace+"."+cassandraTemplate.vectorstore+" ORDER BY embedding ANN OF ? LIMIT "+k+"", openaiembedding, openaiembedding);
         for (Row row : resultSet) {
