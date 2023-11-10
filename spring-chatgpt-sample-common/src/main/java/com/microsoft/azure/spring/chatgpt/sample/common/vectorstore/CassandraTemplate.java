@@ -21,7 +21,7 @@ public class CassandraTemplate {
     public CassandraTemplate() throws IOException {
         //CREATE TABLE vectorstore (id text PRIMARY KEY, hash text, text text, embedding vector <float, 1536> );
         Configurations config = new Configurations();
-        String dc = config.getProperty("DC");
+        String dc = System.getenv("CASSANDRA_DATACENTER");
         this.vectorstore = config.getProperty("table");
         this.keyspace = config.getProperty("keyspace");
         cassandraSession = CqlSession.builder().withLocalDatacenter(dc).build();

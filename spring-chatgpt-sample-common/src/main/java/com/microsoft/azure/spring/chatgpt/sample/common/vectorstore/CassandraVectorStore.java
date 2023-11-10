@@ -28,7 +28,7 @@ public class CassandraVectorStore implements VectorStore {
         this.cassandraTemplate =  new CassandraTemplate();
     }
     @Override
-    public void saveDocument(String key, CassandraEntity row) throws IOException {
+    public void saveRow(String key, CassandraEntity row) throws IOException {
         cassandraTemplate.insert(row);
     }
 
@@ -47,7 +47,7 @@ public class CassandraVectorStore implements VectorStore {
     }
 
     @Override
-    public void saveDocuments(List<CassandraEntity> rows) throws IOException {
+    public void saveRows(List<CassandraEntity> rows) throws IOException {
         try {
             cassandraTemplate.insertMany(rows);
         } catch (InterruptedException e) {
@@ -56,13 +56,13 @@ public class CassandraVectorStore implements VectorStore {
     }
 
     @Override
-    public CassandraEntity getDocument(String key) {
+    public CassandraEntity getRow(String key) {
         var doc = cassandraTemplate.selectOneById(key);
         return doc;
     }
 
     @Override
-    public void removeDocument(String key) {
+    public void removeRow(String key) {
         cassandraTemplate.deleteById(key);
     }
 
