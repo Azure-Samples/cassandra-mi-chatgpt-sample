@@ -19,7 +19,6 @@ public class CassandraTemplate {
     String keyspace;
 
     public CassandraTemplate() throws IOException {
-        //CREATE TABLE vectorstore (id text PRIMARY KEY, hash text, text text, embedding vector <float, 1536> );
         Configurations config = new Configurations();
         String dc = System.getenv("CASSANDRA_DATACENTER");
         this.vectorstore = config.getProperty("table");
