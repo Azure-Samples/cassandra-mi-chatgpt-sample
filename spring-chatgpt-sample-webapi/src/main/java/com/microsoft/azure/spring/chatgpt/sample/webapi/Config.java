@@ -49,11 +49,6 @@ public class Config {
         return new AzureOpenAIClient(innerClient, embeddingDeploymentId, chatDeploymentId);
     }
 
-/*    @Bean
-    public CassandraUtils cassandraTemplate() throws IOException {
-        return new CassandraUtils();
-    }*/
-
     @Bean
     public VectorStore vectorStore() throws IOException {
         CassandraVectorStore store = new CassandraVectorStore();
