@@ -54,6 +54,7 @@ The following prerequisites are required to use this application. Please ensure 
    set CASSANDRA_USERNAME=<Your Cassandra username>
    set CASSANDRA_PASSWORD=<Your Cassandra password>
    set CASSANDRA_CONTACT_POINT=<IP Address from one node in your Cassandra Managed Instance cluster>
+   set CASSANDRA_DATACENTER=<datacenter name from your Cassandra Managed Instance cluster>
    ```
    NOTE: The `CASSANDRA_CONTACT_POINT` variable should include the port, e.g.: `10.41.1.11:9042`
 
@@ -67,6 +68,7 @@ The following prerequisites are required to use this application. Please ensure 
    $env:CASSANDRA_USERNAME="<Your Cassandra username>"
    $env:CASSANDRA_PASSWORD="<Your Cassandra password>"
    $env:CASSANDRA_CONTACT_POINT="<IP Address from one node in your Cassandra Managed Instance cluster>"
+   $env:CASSANDRA_DATACENTER="<datacenter name from your Cassandra Managed Instance cluster>"
    ```
 
 

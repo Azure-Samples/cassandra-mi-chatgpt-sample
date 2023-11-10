@@ -59,7 +59,7 @@ public class DocumentIndexPlanner {
                         .build());
             }
             try {
-                vectorStore.saveDocuments(entities);
+                vectorStore.saveRows(entities);
                 vectorStore.storeKey(fileName);
             } catch (IOException e) {
                 throw new RuntimeException(e);
